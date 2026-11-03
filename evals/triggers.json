@@ -1,0 +1,12 @@
+{
+  "skill": "neverland-vedust-rewards",
+  "test_cases": [
+    {"input": "add my dust rewards to my infinite lock", "should_trigger": true},
+    {"input": "create a new infinite lock with the rewards", "should_trigger": true},
+    {"input": "handle my claimable DUST into an existing infinite NFT", "should_trigger": true},
+    {"input": "combine my infinite locks", "should_trigger": true},
+    {"input": "merge my veDUST NFTs into one", "should_trigger": true},
+    {"input": "what's the price of MON", "should_trigger": false},
+    {"input": "lock my DUST for 30 days", "should_trigger": false}
+  ]
+}

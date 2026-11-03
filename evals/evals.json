@@ -1,0 +1,25 @@
+{
+  "skill": "neverland-vedust-rewards",
+  "test_cases": [
+    {
+      "name": "add_to_existing_infinite",
+      "input": "Add my dust rewards to my infinite lock NFT #123",
+      "assertions": ["verifies tokenId 123 is infinite", "prepares claim with tokenId=123", "does not allow timed lock"]
+    },
+    {
+      "name": "create_new_infinite",
+      "input": "Create a new infinite lock with my claimable DUST rewards",
+      "assertions": ["prepares claim that creates a new infinite lock", "uses infinite lockTime", "reports 0% penalty"]
+    },
+    {
+      "name": "rejects_timed",
+      "input": "Lock my rewards for 6 months",
+      "assertions": ["refuses", "explains hard rule that only infinite locks are supported"]
+    },
+    {
+      "name": "merge_infinite_locks",
+      "input": "Combine my infinite locks #123 and #456 into one",
+      "assertions": ["verifies both are infinite", "prepares merge transaction", "warns that one NFT will be burned", "result remains infinite"]
+    }
+  ]
+}
