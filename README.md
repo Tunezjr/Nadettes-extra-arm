@@ -1,2 +1,7 @@
 # Nadettes-extra-arm
-Hi, this skill is to help you save time on autonomous actions. unpack this skill and give it to your nadette, and she can automatically help you lock your nee emissions, add them to existing locks, create new ones, or merge them.  
+
+Skill for Neverland Money veDUST on Monad.
+
+Helps route claimable DUST rewards into infinite locks (add to existing or create new) and merge existing infinite locks. Hard rule: infinite locks only.
+
+See [SKILL.md](./SKILL.md) for the full workflow, contract addresses, and verified claim parameters.
