@@ -12,7 +12,7 @@ Routes claimable DUST rewards (from lending supply/borrow) into infinite veDUST 
 ## Hard Rule
 
 **Only infinite locks are allowed.**  
-- Adding to existing: target tokenId **must** be an infinite lock.  
+- Adding to existing: target tokenId **must** be an infinite lock (`isPermanent == true`).  
 - Creating new: the claim **must** create an infinite lock.  
 - Merging/combining: every source lock and the resulting lock **must** be infinite.  
 Refuse or stop if the user asks for a timed lock, or if any selected NFT is not infinite.
@@ -24,8 +24,24 @@ Refuse or stop if the user asks for a timed lock, or if any selected NFT is not 
 | DustRewardsController (Proxy) | `0x57ea245cCbFAb074baBb9d01d1F0c60525E52cec` |
 | DustLock (Proxy) | `0xBB4738D05AD1b3Da57a4881baE62Ce9bb1eEeD6C` |
 | DUST (Proxy) | `0xAD96C3dffCD6374294e2573A7fBBA96097CC8d7c` |
+| DustLockTransferStrategy | `0xa966190d7BD099718110103d1778bb232Bd1661E` |
 
-Recommended libraries (when code execution is available): `@neverland-money/contract-types` + `viem`.
+Recommended libraries (when code execution is available): `@neverland-money/contract-types` or `@neverland-money/tokenomics-core` + `viem`.
+
+## Verified Claim Parameters (from DustLockTransferStrategy source)
+
+| Intent | tokenId | lockTime | Penalty |
+|--------|---------|----------|---------|
+| Add to existing infinite lock | Verified infinite tokenId | Any (ignored when tokenId > 0 and lock is permanent) | 0% |
+| Create new infinite lock | `0` | `type(uint256).max` | 0% |
+| Instant liquid (not supported by this skill) | `0` | `0` | 50% |
+
+Primary claim functions on DustRewardsController:
+- `claimAllRewardsToSelf(address[] assets, uint256 lockTime, uint256 tokenId)`
+- `claimRewardsToSelf(...)` variants
+
+Merge function on DustLock:
+- `merge(uint256 _from, uint256 _to)` — burns `_from`, combines amount into surviving `_to`.
 
 ## Workflow
 
@@ -36,22 +52,23 @@ Recommended libraries (when code execution is available): `@neverland-money/cont
    - “Create new” → create a new infinite lock.
 
 2. **Verify infinite lock** (when adding)  
-   - Query DustLock to confirm the tokenId is permanent/infinite (no unlock time, or `isPermanent` / equivalent view).  
-   - Confirm the user owns it.  
+   - Query `DustLock.locked(tokenId)` and confirm `isPermanent == true`.  
+   - Confirm the user owns it via `ownerOf(tokenId)`.  
    - If not infinite, stop and tell the user.
 
 3. **Check claimable rewards**  
-   - Call DustRewardsController views (e.g. `getUserRewards` or equivalent) for the user’s address.  
+   - Call `getAllUserRewards` / `getUserRewards` on DustRewardsController for the user’s address.  
    - Report the amount before proceeding.
 
 4. **Construct the claim**  
-   - Use the appropriate claim function that accepts `lockTime` and `tokenId`.  
-   - For infinite: set lockTime to the permanent/infinite value used by the protocol (commonly a max duration flag or the value accepted by `createLockPermanent*` paths; confirm against current DustLockTransferStrategy behavior).  
+   - Use `claimAllRewardsToSelf` (or equivalent) with the exact parameters from the table above.  
    - For add-to-existing: pass the verified infinite `tokenId`.  
-   - For create-new: pass `tokenId = 0` (or the protocol’s “create new” sentinel) with infinite lockTime.
+   - For create-new: pass `tokenId = 0` and `lockTime = type(uint256).max`.
 
-5. **Present for signature**  
-   - Show: claimable amount, target (existing tokenId or “new infinite lock”), estimated net locked amount (infinite claims have 0% claim penalty), and the exact transaction the user must sign.  
+5. **Preview and present for signature**  
+   - Call `previewClaim(amount, lockTime, tokenId)` on DustLockTransferStrategy to confirm exact penalty (must be 0 for infinite) and net amount.  
+   - Show: claimable amount, target (existing tokenId or “new infinite lock”), confirmed 0% penalty / net locked amount, and the exact transaction the user must sign.  
+   - Require simulation (wallet simulation / Tenderly / equivalent) and independent verification of parameters before signing.  
    - Never auto-sign. The platform AI only prepares and explains.
 
 ### Combining Existing Infinite Locks
@@ -61,18 +78,18 @@ Recommended libraries (when code execution is available): `@neverland-money/cont
    - One will typically be the target that survives (user can choose which artwork/character to keep).
 
 2. **Verify all are infinite and owned**  
-   - Query DustLock for each tokenId: must be permanent/infinite and owned by the user.  
+   - Query `DustLock.locked(tokenId)` for each: must be `isPermanent == true` and owned by the user.  
    - If any is not infinite, stop.
 
 3. **Construct merge**  
-   - Use the DustLock merge function (typically merges `from` tokenId into a target tokenId).  
-   - Both must be active. Result keeps the later unlock time (infinite remains infinite).  
-   - One NFT is burned; amounts are combined into the surviving NFT.  
+   - Use `DustLock.merge(_from, _to)`.  
+   - **Warning: the `_from` NFT is burned.** Amounts are combined into the surviving `_to` NFT. Result remains infinite.  
    - If combining more than two, do sequential merges into the same target.
 
 4. **Present for signature**  
    - Show source tokenIds, target tokenId, combined locked amount, and the exact transaction(s).  
-   - Note that the non-target NFT will be burned.  
+   - Explicitly warn that the non-target NFT will be permanently burned.  
+   - Require simulation and independent verification before signing.  
    - Never auto-sign.
 
 ## Minimums & Notes
@@ -95,8 +112,10 @@ Recommended libraries (when code execution is available): `@neverland-money/cont
 
 ## Safety
 
-- Always re-verify ownership and infinite status immediately before constructing any transaction.  
+- Always re-verify ownership and `isPermanent` status immediately before constructing any transaction.  
+- Call `previewClaim` to confirm 0% penalty and net amount before presenting.  
+- Require simulation and independent verification of all parameters (tokenId, lockTime, recipient, expected net amount, which NFT is burned) before the user signs.  
 - If the user has multiple infinite locks, ask which tokenId to use as the target.  
 - If claimable is below the relevant minimum, inform the user and stop.  
 - Do not support timed locks under any circumstances.  
-- For merges, clearly warn that the non-target NFT will be burned.
+- For merges, clearly and explicitly warn that the non-target NFT will be burned.
