@@ -1,2 +1,2 @@
 # Nadettes-extra-arm
-Skill for handling Neverland Money veDUST infinite lock rewards and merges on Monad. Named Nadettes extra arm.
+Hi, this skill is to help you save time on autonomous actions. unpack this skill and give it to your nadette, and she can automatically help you lock your nee emissions, add them to existing locks, create new ones, or merge them.  
